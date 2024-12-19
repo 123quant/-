@@ -28,7 +28,9 @@ pip install -r requirements.txt
 
 打开 配置文件->config.ini
 
-![image-20241219085031486](https://github.com/123quant/QMT-QuantLimit/tree/main/assets/images/image-20241219085031486.png)
+<p align="center">
+  <img src="assets/images/image-20241219085031486.png" />
+</p>
 
 本策略通过miniqmt实现，需要配置三个参数
 
@@ -40,7 +42,11 @@ pip install -r requirements.txt
 
 打开 配置文件->股票池.txt
 
-![image-20241219085524214](assets\images\image-20241219085524214.png)
+<p align="center">
+  <img src="assets/images/image-20241219085524214.png" />
+</p>
+
+
 
 把需要监控的股票填进股票池，也可以使用同花顺、通达信导出的股票池。
 
@@ -53,11 +59,15 @@ pip install -r requirements.txt
 python 策略数据初始化.py
 ```
 
-![image-20241219085756431](assets\images\image-20241219085756431.png)
+<p align="center">
+  <img src="assets/images/image-20241219085756431.png" />
+</p>
 
 运行结束后在配置文件价下有一个json数据，记录今日沪深A股的涨停价
 
-![image-20241219085910444](assets\images\image-20241219085910444.png)
+<p align="center">
+  <img src="assets/images/image-20241219085910444.png" />
+</p>
 
 4.最后直接运行策略，开始打板
 
@@ -66,7 +76,9 @@ python 策略数据初始化.py
 python ./打板策略.py
 ```
 
-![image-20241219090049748](assets\images\image-20241219090049748.png)
+<p align="center">
+  <img src="assets/images/image-20241219090049748.png" />
+</p>
 
 ## 后续
 
