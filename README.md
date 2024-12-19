@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 打开 配置文件->config.ini
 
-![image-20241219085031486](assets\images\image-20241219085031486.png)
+![image-20241219085031486](.\assets\images\image-20241219085031486.png)
 
 本策略通过miniqmt实现，需要配置三个参数
 
