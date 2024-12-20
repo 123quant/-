@@ -13,7 +13,7 @@ from xtquant import xtconstant
 
 # 获取当天日期并转换为'YYYYMMDD'格式
 today_str = datetime.now().strftime('%Y%m%d')
-now_time = datetime.now().strftime("%H:%M")
+# now_time = datetime.now().strftime("%H:%M")
 
 
 print('开始读取涨停价字典')
@@ -57,14 +57,12 @@ class _a():
 A = _a()
 A.bought_list = []
 
-if '15:00'>=now_time >='09:25':
+def update_bought_list():
     full_data = xtdata.get_full_tick(code_list)
     #检测如果当前价格已经等于涨停价就加入A.bought_list中
     for stock in code_list:
         if full_data[stock]['lastPrice'] == loaded_dict[stock]:
             A.bought_list.append(stock)
-#code_list中剩下的股票加入监控
-code_list = [stock for stock in code_list if stock not in A.bought_list]
 
 #======================================================
 
@@ -85,10 +83,15 @@ def load_config():
 
     return path, stock_account, buy_values  
 
+update_bought_list_num = 0
 
-
+#======================================================
 def f(data):
     now = datetime.now().strftime("%H:%M")
+    if update_bought_list_num == 0 and now >= '09:25':
+        update_bought_list()
+        update_bought_list_num = 1
+
     for stock  in data:
         if stock not in code_list:
             continue
