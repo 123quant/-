@@ -10,15 +10,63 @@ from xtquant.xttype import StockAccount
 from xtquant import xtconstant
 
 
+
 # 获取当天日期并转换为'YYYYMMDD'格式
 today_str = datetime.now().strftime('%Y%m%d')
+now_time = datetime.now().strftime("%H:%M")
+
+
+print('开始读取涨停价字典')
 try:
     # 读取JSON文件
     with open('./配置文件/{}-limit_up_prices.json'.format(today_str), 'r', encoding='utf-8') as f:
         loaded_dict = json.load(f)
 except:
     print('没有找到涨停价字典文件,请先运行打板配置')
+print('读取涨停价字典完成')
 
+#======================================================
+
+print('开始读取股票池')
+# 读取股票池
+file_path = './配置文件/股票池.txt'
+
+# 尝试读取文件
+try:
+    with open(file_path, 'r', encoding='utf-8') as file:
+        # 读取文件内容
+        code_list = file.read().splitlines() # .strip() 去除两端的空白字符
+        
+        # 判断文件是否为空
+        if not code_list:
+            print("股票池为空，请填写股票池")
+        else:
+            print("打板股票池：")
+            print(code_list)
+except FileNotFoundError:
+    print(f"文件 {file_path} 不存在，请检查文件路径。")
+except Exception as e:
+    print(f"发生错误：{e}")
+    
+    
+
+# 定义一个类 创建类的实例 作为状态的容器
+class _a():
+    pass
+
+A = _a()
+A.bought_list = []
+
+if '15:00'>=now_time >='09:25':
+    full_data = xtdata.get_full_tick(code_list)
+    #检测如果当前价格已经等于涨停价就加入A.bought_list中
+    for stock in code_list:
+        if full_data[stock]['lastPrice'] == loaded_dict[stock]:
+            A.bought_list.append(stock)
+#code_list中剩下的股票加入监控
+code_list = [stock for stock in code_list if stock not in A.bought_list]
+
+#======================================================
 
 def load_config():
     # 定义配置文件路径
@@ -38,6 +86,7 @@ def load_config():
     return path, stock_account, buy_values  
 
 
+
 def f(data):
     now = datetime.now().strftime("%H:%M")
     for stock  in data:
@@ -55,7 +104,7 @@ def f(data):
         
             lastPrice_array = xtdata.get_market_data_ex_ori(field_list= ['lastPrice'],period='tick',stock_list=[stock])[stock]
             
-            factor3 = ((lastPrice_array[-1][0]-lastPrice_array[-25][0])/lastPrice_array[-25][0]) >= 0.03
+            factor3 = ((lastPrice_array[-1][0]-lastPrice_array[-25][0])/data[stock]['lastClose']) >= 0.03
             if factor3:
                 stock_count = buy_values / cuurent_price
                 # 取整到最接近的 100 的倍数
@@ -128,19 +177,11 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         """
         print(datetime.datetime.now(), sys._getframe().f_code.co_name)
 
-def interact():
-    """执行后进入repl模式"""
-    import code
-    code.InteractiveConsole(locals=globals()).interact()
+# def interact():
+#     """执行后进入repl模式"""
+#     import code
+#     code.InteractiveConsole(locals=globals()).interact()
 
-
-# 定义一个类 创建类的实例 作为状态的容器
-class _a():
-    pass
-
-
-A = _a()
-A.bought_list = []
 
 
 
@@ -155,27 +196,7 @@ if __name__ == '__main__':
         print('没有找到配置文件,请先填写配置文件')
 
 
-    # 定义文件路径
-    file_path = './配置文件/股票池.txt'
 
-    # 尝试读取文件
-    try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            # 读取文件内容
-            code_list = file.read().splitlines() # .strip() 去除两端的空白字符
-            
-            # 判断文件是否为空
-            if not code_list:
-                print("股票池为空，请填写股票池")
-            else:
-                print("打板股票池：")
-                print(code_list)
-    except FileNotFoundError:
-        print(f"文件 {file_path} 不存在，请检查文件路径。")
-    except Exception as e:
-        print(f"发生错误：{e}")
-        
-        
 
     print("start")
     # 指定客户端所在路径, 券商端指定到 userdata_mini文件夹
