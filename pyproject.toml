@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "qmt-quantlimit"
+version = "0.1.0"
+description = "打板策略一直是a股生命力很顽强的策略，也造就了很多游资神话，本项目是研究如何将打板策略实现量化。"
+authors = ["123quant"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pandas = "^2.2.3"
+ray = "^2.40.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
