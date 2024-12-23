@@ -57,23 +57,21 @@ pip install -r requirements.txt
 
 打开配置文件需要填写3个参数
 
-​	自己的大模型的api_key，没有的可以点击下面的链接注册申请
+​	**api_key：**自己的大模型的api_key，没有的可以点击下面的链接注册申请
 
 <p align="center">
   <img src="assets/images/api_key.png" />
 </p>
 
 
-
-  		选择哪个大模型，现在支持 [kimi]( https://platform.moonshot.cn/)  和  [阶跃星辰]( [阶跃星辰开放平台](https://platform.stepfun.com/))（step）
+​	model_name：选择哪个大模型，现在支持 [kimi]( https://platform.moonshot.cn/)  和  [阶跃星辰]( [阶跃星辰开放平台](https://platform.stepfun.com/))（step）
 
 - 这两个模型都可以免费申请使用
 
 <p align="center">
   <img src="assets/images/big_model_config.png" />
 </p>
-
-​	配置完大模型参数还有就是我们的数据来源与[韭研公社](https://www.jiuyangongshe.com/)，gygs_data_hours 是获取社区前几个显示的数据给大模型
+**gygs_data_hours：**配置完大模型参数还有就是我们的数据来源与[韭研公社](https://www.jiuyangongshe.com/)，gygs_data_hours 是获取社区前几个显示的数据给大模型
 
 最后运行代码获取大模型股票池
 
