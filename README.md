@@ -57,7 +57,7 @@ pip install -r requirements.txt
 
 打开配置文件需要填写3个参数
 
-​	**api_key：**自己的大模型的api_key，没有的可以点击下面的链接注册申请
+​	**api_key：** 自己的大模型的api_key，没有的可以点击下面的链接注册申请
 
 <p align="center">
   <img src="assets/images/api_key.png" />
@@ -71,9 +71,11 @@ pip install -r requirements.txt
 <p align="center">
   <img src="assets/images/big_model_config.png" />
 </p>
-**gygs_data_hours：**配置完大模型参数还有就是我们的数据来源与[韭研公社](https://www.jiuyangongshe.com/)，gygs_data_hours 是获取社区前几个显示的数据给大模型
+**gygs_data_hours：** 配置完大模型参数还有就是我们的数据来源与[韭研公社](https://www.jiuyangongshe.com/)，gygs_data_hours 是获取社区前几个显示的数据给大模型
 
-最后运行代码获取大模型股票池
+
+
+**最后运行代码获取大模型股票池**
 
 ```python
 #在运行代码前需要先cd 到本项目目录下
