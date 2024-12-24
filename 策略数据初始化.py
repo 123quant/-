@@ -1,9 +1,10 @@
-
+import json
 from xtquant import xtdata
 import pandas as pd
 from datetime import datetime
 import ray
-
+import os
+import glob
 xtdata.enable_hello = False
 
 
@@ -11,16 +12,12 @@ xtdata.enable_hello = False
 # 获取当前时间
 current_time = datetime.now().strftime('%H:%M')
 
-current_time
-
 
 sector_list = xtdata.get_sector_list()
 if not sector_list:
     xtdata.download_sector_data()
 
-import os
-import glob
-
+#___________________________________________________________
 # 指定文件夹路径
 folder_path = './配置文件'
 
@@ -43,10 +40,9 @@ today_str = datetime.now().strftime('%Y%m%d')
 today_str
 
 
-print('开始下载数据,需要花费5分钟')
 
-
-data_000001 = xtdata.get_local_data(field_list=['open', 'high', 'low', 'close', 'volume', 'amount'],
+#___________________________________________________________
+data_000001 = xtdata.get_local_data(field_list=['open',],
                            stock_list=['000001.SZ'],
                            count=2,
                            period='1d')['000001.SZ']
@@ -57,9 +53,12 @@ if "15:00">  current_time > "09:15":
 else:
     trader_data = data_000001.index[-1]
 
+#___________________________________________________________
 if new_data_time == today_str:
-    print('数据已更新')
+    print('数据已更新，跳过下载')
 else:
+    print('开始下载数据,需要花费5分钟')
+
     # 初始化Ray（如果还没初始化）
     if not ray.is_initialized():
         ray.init()
@@ -72,8 +71,20 @@ else:
     futures = [download_stock_data.remote(stock) for stock in stock_list]
     ray.get(futures)
     print('数据下载完成')
+#___________________________________________________________
+data_000001 = xtdata.get_local_data(field_list=['open',],
+                           stock_list=['000001.SZ'],
+                           count=2,
+                           period='1d')['000001.SZ']
+new_data_time = data_000001.index[-1]
+
+if "15:00">  current_time > "09:15":
+    trader_data = data_000001.index[0]
+else:
+    trader_data = data_000001.index[-1]
 
 
+print('读取{}日线数据并计算涨停价'.format(trader_data))
 # 获取所有A股股票代码列表
 stock_list = xtdata.get_stock_list_in_sector('沪深A股')
 
@@ -99,23 +110,19 @@ def calc_limit_up_price(close_price, stock_code):
 
 # 计算每只股票的涨停价
 result_df['limit_up_price'] = result_df.apply(lambda x: calc_limit_up_price(x['close'], x['code']), axis=1)
-result_df
+# result_df
 
 print('计算涨停价完成')
 
 
-import json
-
 # 将DataFrame的两列转换为字典
 limit_up_dict = dict(zip(result_df['code'], result_df['limit_up_price']))
 
-
-import json
 
 # 将DataFrame的两列转换为字典
 limit_up_dict = dict(zip(result_df['code'], result_df['limit_up_price']))
 # 保存为JSON文件
-with open('./配置文件/{}-limit_up_prices.json'.format(trader_data), 'w', encoding='utf-8') as f:
+with open('./配置文件/{}-limit_up_prices.json'.format(today_str), 'w', encoding='utf-8') as f:
     json.dump(limit_up_dict, f, indent=4)
 
 
