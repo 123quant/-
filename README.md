@@ -64,22 +64,21 @@ pip install -r requirements.txt
 </p>
 
 
-​	model_name：选择哪个大模型，现在支持 [kimi]( https://platform.moonshot.cn/)  和  [阶跃星辰]( [阶跃星辰开放平台](https://platform.stepfun.com/))（step）
+​	model_name：选择哪个大模型，现在支持 [kimi]( https://platform.moonshot.cn/)  和  [阶跃星辰]( https://platform.stepfun.com/)（step）
 
 - 这两个模型都可以免费申请使用
 
 <p align="center">
   <img src="assets/images/big_model_config.png" />
 </p>
-**gygs_data_hours：** 配置完大模型参数还有就是我们的数据来源与[韭研公社](https://www.jiuyangongshe.com/)，gygs_data_hours 是获取社区前几个显示的数据给大模型
 
+**gygs_data_hours：**  配置完大模型参数还有就是我们的数据来源与 [韭研公社](https://www.jiuyangongshe.com/) ，gygs_data_hours 是获取社区前几个显示的数据给大模型
 
-
-**最后运行代码获取大模型股票池**
+最后运行代码获取大模型股票池
 
 ```python
 #在运行代码前需要先cd 到本项目目录下
-python .\选股\舆情选股\big_model_api.py
+python .\选股\舆情选股\big_model_api.pyc
 ```
 
 <p align="center">

@@ -1,3 +1,6 @@
+beautifulsoup4==4.12.3
+openai==1.58.1
 pandas==2.2.3
-ray==2.40.0
-xtquant==241014.1.2
+playwright==1.49.1
+Requests==2.32.3
+#xtquant==241014.1.2
