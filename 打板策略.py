@@ -1,21 +1,19 @@
 from xtquant import xtdata
 import pandas as pd
 from datetime import datetime
-import time
 import json
-import os,sys
+import os
 import configparser
+from xtquant import xtdata
 from xtquant.xttrader import XtQuantTrader, XtQuantTraderCallback
 from xtquant.xttype import StockAccount
 from xtquant import xtconstant
-
-
+import collections
+import sys
+import time
 
 # 获取当天日期并转换为'YYYYMMDD'格式
 today_str = datetime.now().strftime('%Y%m%d')
-# now_time = datetime.now().strftime("%H:%M")
-
-
 print('开始读取涨停价字典')
 try:
     # 读取JSON文件
@@ -24,8 +22,7 @@ try:
 except:
     print('没有找到涨停价字典文件,请先运行打板配置')
 print('读取涨停价字典完成')
-
-#======================================================
+#————————————————————————————————————————————————————————————
 
 print('开始读取股票池')
 # 读取股票池
@@ -41,31 +38,15 @@ try:
         if not code_list:
             print("股票池为空，请填写股票池")
         else:
-            print("打板股票池：")
-            print(code_list)
+            print('读取股票池完成',code_list)
 except FileNotFoundError:
     print(f"文件 {file_path} 不存在，请检查文件路径。")
 except Exception as e:
     print(f"发生错误：{e}")
-    
-    
 
-# 定义一个类 创建类的实例 作为状态的容器
-class _a():
-    pass
 
-A = _a()
-A.bought_list = []
 
-def update_bought_list():
-    full_data = xtdata.get_full_tick(code_list)
-    #检测如果当前价格已经等于涨停价就加入A.bought_list中
-    for stock in code_list:
-        if full_data[stock]['lastPrice'] == loaded_dict[stock]:
-            A.bought_list.append(stock)
-
-#======================================================
-
+#___________________________________________________________
 def load_config():
     # 定义配置文件路径
     config_file = './配置文件/config.ini'
@@ -82,39 +63,102 @@ def load_config():
     buy_values = config.getint('Trading', 'buy_values')
 
     return path, stock_account, buy_values  
+try:
+    path, stock_account, buy_values = load_config()
+    print(f"qmt路径: {path}")
+    print(f"账号: {stock_account}")
+    print(f"每笔买多少元: {buy_values}")
+except:
+    print('没有找到配置文件,请先填写配置文件')
+print('读取配置文件完成')
+#___________________________________________________________
+# 定义一个类 创建类的实例 作为状态的容器
+class _a():
+    pass
 
-update_bought_list_num = 0
 
-#======================================================
-def f(data):
+A = _a()
+A.bought_list = []
+A.data_cache = {}
+A.update_bought_list_num = 0
+#___________________________________________________________
+def update_bought_list():
+    full_data = xtdata.get_full_tick(code_list)
+    #检测如果当前价格已经等于涨停价就加入A.bought_list中
+    for stock in code_list:
+        if full_data[stock]['lastPrice'] == loaded_dict[stock]:
+            A.bought_list.append(stock)
+
+
+
+# code_list = xtdata.get_stock_list_in_sector('沪深A股')
+
+# 数据缓存：存储每个股票的最近40个数据
+
+# ['time', 'lastPrice', 'open', 'high', 'low', 'lastClose', 'amount', 'volume', 'pvolume', 'stockStatus', 'openInt', 'transactionNum', 'lastSettlementPrice', 'settlementPrice', 'pe', 'askPrice', 'bidPrice', 'askVol', 'bidVol', 'volRatio', 'speed1Min', 'speed5Min']
+# 更新缓存中的数据（只保留最近40个数据）
+def update_cache(stock, new_data):
+    if stock not in A.data_cache:
+        # 如果股票没有数据缓存，初始化一个空的队列
+        A.data_cache[stock] = collections.deque(maxlen=40)  # 保留最近40条数据
+    
+    # 添加新的数据记录
+    A.data_cache[stock].append(new_data)
+
+
+
+# 因子计算
+def calculate_factors(stock):
+    if stock not in A.data_cache:
+        return False  # 如果缓存中没有数据，跳过计算
+    data = A.data_cache[stock]
+    num = len(data)
+    if num < 25:
+        Start_price  = data[-1]['lastPrice']
+    else:
+        Start_price  = data[-25]['lastPrice']
+
+    last_price = data[-1]['lastPrice']
+    lastclose = data[-1]['lastClose']
+    factor3 = ((last_price-Start_price)/lastclose) >= 0.03 
+    
+
+    return factor3
+
+
+def on_tick(data):
     now = datetime.now().strftime("%H:%M")
-    if update_bought_list_num == 0 and now >= '09:25':
+    #每次运行剔除已经涨停的票
+    if A.update_bought_list_num == 0 and now >= '09:25':
         update_bought_list()
-        update_bought_list_num = 1
+        A.update_bought_list_num = 1
 
-    for stock  in data:
-        if stock not in code_list:
+    for stock, stock_data in data.items():
+        if (stock not in code_list )or (stock in A.bought_list):
             continue
-        print('监控',stock,data[stock])
-        cuurent_price = data[stock]['lastPrice']
+        # 更新缓存数据以便计算因子
+        update_cache(stock, stock_data)
+        # print(stock,stock_data)
+
+        lastprice = stock_data['lastPrice']
+
         up_limit_price = loaded_dict[stock]
-        factor1 = cuurent_price >= up_limit_price
-        factor2 = stock not in A.bought_list
-        
-        if factor1  and factor2 and now <= '10:00':
-            print(stock,'到达涨停')
-            xtdata.download_history_data(stock_code=stock,period='tick',start_time=today_str,incrementally=True)
-        
-            lastPrice_array = xtdata.get_market_data_ex_ori(field_list= ['lastPrice'],period='tick',stock_list=[stock])[stock]
-            
-            factor3 = ((lastPrice_array[-1][0]-lastPrice_array[-25][0])/data[stock]['lastClose']) >= 0.03
+
+        factor1 = lastprice >= up_limit_price
+        if factor1 and now <= '10:00':
+            print(stock,'达到涨停价')
+            factor3 = calculate_factors(stock)
             if factor3:
-                stock_count = buy_values / cuurent_price
+                print(stock,'符合打板条件')
+                stock_count = buy_values / lastprice
                 # 取整到最接近的 100 的倍数
                 buy_volume = round(stock_count / 100) * 100
+                print(stock,'买入数量',buy_volume)
         
-                async_seq = xt_trader.order_stock_async(acc, stock, xtconstant.STOCK_BUY, buy_volume, xtconstant.LATEST_PRICE, up_limit_price, 'limit_up_strategy')
+                async_seq = xt_trader.order_stock_async(acc, stock, xtconstant.STOCK_BUY, buy_volume, xtconstant.LATEST_PRICE, up_limit_price, '打板策略')
                 A.bought_list.append(stock)
+
+
 
 class MyXtQuantTraderCallback(XtQuantTraderCallback):
     def on_disconnected(self):
@@ -180,26 +224,16 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         """
         print(datetime.datetime.now(), sys._getframe().f_code.co_name)
 
-# def interact():
-#     """执行后进入repl模式"""
-#     import code
-#     code.InteractiveConsole(locals=globals()).interact()
-
+def interact():
+    """执行后进入repl模式"""
+    import code
+    code.InteractiveConsole(locals=globals()).interact()
 
 
 
 
 if __name__ == '__main__':
-    try:
-        path, stock_account, buy_values = load_config()
-        print(f"qmt路径: {path}")
-        print(f"账号: {stock_account}")
-        print(f"每笔买多少元: {buy_values}")
-    except:
-        print('没有找到配置文件,请先填写配置文件')
-
-
-
+    xtdata.enable_hello = False
 
     print("start")
     # 指定客户端所在路径, 券商端指定到 userdata_mini文件夹
@@ -225,6 +259,6 @@ if __name__ == '__main__':
     # 对交易回调进行订阅，订阅后可以收到交易主推，返回0表示订阅成功
     subscribe_result = xt_trader.subscribe(acc)
     print('对交易回调进行订阅，订阅后可以收到交易主推，返回0表示订阅成功', subscribe_result)
-    xtdata.subscribe_whole_quote(code_list, callback=f)
+    xtdata.subscribe_whole_quote(code_list, callback=on_tick)
     xt_trader.run_forever()
 
