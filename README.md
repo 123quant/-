@@ -22,6 +22,14 @@ git clone  https://github.com/123quant/QMT-QuantLimit.git
 pip install -r requirements.txt
 ```
 
+初始化playwright，只需要做一次
+
+```
+python -m playwright install
+```
+
+
+
 ## 使用方法
 
 1.配置参数
