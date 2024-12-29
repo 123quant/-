@@ -1,4 +1,3 @@
-from xtquant import xtdata
 import pandas as pd
 from datetime import datetime
 import json
@@ -11,16 +10,17 @@ from xtquant import xtconstant
 import collections
 import sys
 import time
+xtdata.enable_hello = False
 
 # 获取当天日期并转换为'YYYYMMDD'格式
 today_str = datetime.now().strftime('%Y%m%d')
-print('开始读取涨停价字典')
-try:
-    # 读取JSON文件
-    with open('./配置文件/{}-limit_up_prices.json'.format(today_str), 'r', encoding='utf-8') as f:
-        loaded_dict = json.load(f)
-except:
-    print('没有找到涨停价字典文件,请先运行打板配置')
+print('开始获取涨停价数据')
+from xtquant import xtdata
+stock_list = xtdata.get_stock_list_in_sector('沪深A股') 
+loaded_dict = {}
+for code in stock_list:
+    UpStopPrice = xtdata.get_instrument_detail(code)['UpStopPrice']
+    loaded_dict[code] = UpStopPrice
 print('读取涨停价字典完成')
 #————————————————————————————————————————————————————————————
 
@@ -61,16 +61,33 @@ def load_config():
     path = r'{}'.format(config.get('Path', 'qmt_path'))
     stock_account = config.get('Account', 'stock_account')
     buy_values = config.getint('Trading', 'buy_values')
-
-    return path, stock_account, buy_values  
+    trade_time_periods = config.get('Trading', 'trade_time_and_ratio')
+    return path, stock_account, buy_values,trade_time_periods  
 try:
-    path, stock_account, buy_values = load_config()
+    path, stock_account, buy_values,trade_time_periods = load_config()
     print(f"qmt路径: {path}")
     print(f"账号: {stock_account}")
     print(f"每笔买多少元: {buy_values}")
+    print(f"交易时间与对应买入比例: {trade_time_periods}")
+    print('读取配置文件完成')
 except:
     print('没有找到配置文件,请先填写配置文件')
-print('读取配置文件完成')
+#___________________________________________________________
+from datetime import datetime
+import ast
+# 获取当前时间
+current_time = datetime.now().strftime('%H:%M')
+trade_time_periods_dict = ast.literal_eval(trade_time_periods)
+# 判断当前时间是否处于某个时间段，并输出买入比例
+def get_buying_ratio(current_time, time_periods):
+    for period, ratio in time_periods.items():
+        start_time, end_time = period.split('~')
+        
+        # 比较当前时间是否在某个时间段内
+        if start_time <= current_time <= end_time:
+            return ratio
+    return None  # 如果不在任何时间段内
+
 #___________________________________________________________
 # 定义一个类 创建类的实例 作为状态的容器
 class _a():
@@ -86,7 +103,7 @@ def update_bought_list():
     full_data = xtdata.get_full_tick(code_list)
     #检测如果当前价格已经等于涨停价就加入A.bought_list中
     for stock in code_list:
-        if full_data[stock]['lastPrice'] == loaded_dict[stock]:
+        if full_data[stock]['lastPrice'] >= loaded_dict[stock]:
             A.bought_list.append(stock)
 
 
@@ -94,9 +111,6 @@ def update_bought_list():
 # code_list = xtdata.get_stock_list_in_sector('沪深A股')
 
 # 数据缓存：存储每个股票的最近40个数据
-
-# ['time', 'lastPrice', 'open', 'high', 'low', 'lastClose', 'amount', 'volume', 'pvolume', 'stockStatus', 'openInt', 'transactionNum', 'lastSettlementPrice', 'settlementPrice', 'pe', 'askPrice', 'bidPrice', 'askVol', 'bidVol', 'volRatio', 'speed1Min', 'speed5Min']
-# 更新缓存中的数据（只保留最近40个数据）
 def update_cache(stock, new_data):
     if stock not in A.data_cache:
         # 如果股票没有数据缓存，初始化一个空的队列
@@ -105,28 +119,53 @@ def update_cache(stock, new_data):
     # 添加新的数据记录
     A.data_cache[stock].append(new_data)
 
-
-
 # 因子计算
 def calculate_factors(stock):
+    '''
+    计算因子
+    '''
+    # 如果缓存中没有数据，跳过计算
     if stock not in A.data_cache:
         return False  # 如果缓存中没有数据，跳过计算
     data = A.data_cache[stock]
-    num = len(data)
-    if num < 25:
+    if len(data) < 25:
         Start_price  = data[-1]['lastPrice']
     else:
         Start_price  = data[-25]['lastPrice']
 
     last_price = data[-1]['lastPrice']
     lastclose = data[-1]['lastClose']
+    #计算因子3:该因子计算的是股票的在股价达到涨停前涨幅，如果涨幅大于3%，则返回True，否则返回False
     factor3 = ((last_price-Start_price)/lastclose) >= 0.03 
     
+    #计算因子4:该因子计算的是股票价格到达涨停价时挂单和最近3tick成交额的总金额大于3000万
+    # last_price = data[-1]['lastPrice']
+    sum_ask_amount = sum(data[-1]['askVol']*100)*last_price
+    pre_3tick_amount = data[-1]['amount'] - data[-3]['amount']
+    all_amount = sum_ask_amount + pre_3tick_amount
+    factor4 = all_amount >= 30000000
 
-    return factor3
+    #计算因子5:该因子计算的是股票在股价到达涨停前20个tick中大单比例大于40%，大单>200万
+    pre_amt = 0
+    big_order_amt = 0
+    for amt in data[-21:]:
+        if pre_amt == 0:
+            amt=0
+        else:
+            amt = amt-pre_amt
+        if amt > 2000000:
+            big_order_amt = amt+big_order_amt
+        pre_amt = amt['amount']
+    sum_amt = data[-1]['amount']-data[-21]['amount']
+    big_order_ratio = big_order_amt/sum_amt
+    factor5 = big_order_ratio >= 0.7
+    return factor3 and factor4 and factor5
+
+
 
 
 def on_tick(data):
+    print(data)
     now = datetime.now().strftime("%H:%M")
     #每次运行剔除已经涨停的票
     if A.update_bought_list_num == 0 and now >= '09:25':
@@ -145,18 +184,17 @@ def on_tick(data):
         up_limit_price = loaded_dict[stock]
 
         factor1 = lastprice >= up_limit_price
-        if factor1 and now <= '10:00':
-            print(stock,'达到涨停价')
-            factor3 = calculate_factors(stock)
-            if factor3:
-                print(stock,'符合打板条件')
+        if factor1:
+            factor = calculate_factors(stock)
+            if factor:
                 stock_count = buy_values / lastprice
                 # 取整到最接近的 100 的倍数
                 buy_volume = round(stock_count / 100) * 100
-                print(stock,'买入数量',buy_volume)
         
                 async_seq = xt_trader.order_stock_async(acc, stock, xtconstant.STOCK_BUY, buy_volume, xtconstant.LATEST_PRICE, up_limit_price, '打板策略')
                 A.bought_list.append(stock)
+        # 更新缓存
+        update_cache(stock, stock_data)
 
 
 
@@ -259,6 +297,7 @@ if __name__ == '__main__':
     # 对交易回调进行订阅，订阅后可以收到交易主推，返回0表示订阅成功
     subscribe_result = xt_trader.subscribe(acc)
     print('对交易回调进行订阅，订阅后可以收到交易主推，返回0表示订阅成功', subscribe_result)
-    xtdata.subscribe_whole_quote(code_list, callback=on_tick)
+    # xtdata.subscribe_whole_quote(code_list, callback=on_tick)
+    xtdata.subscribe_quote('000066.SZ', period='tick', callback=on_tick)
     xt_trader.run_forever()
 
