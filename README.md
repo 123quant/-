@@ -141,3 +141,5 @@ python ./打板策略.py
 <p align="center">
   <img src="assets/images/qmt-打板微信群.jpg" />
 </p>
+
+## 由于二维码有时效可以加我微信拉你进群，注意备注来意：strategyshub
