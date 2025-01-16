@@ -137,8 +137,4 @@ python ./打板策略.py
 - 加入异动打：根据盘中异动自动加入打板监控
 - 。。。
 ## 加入
-有打低位板的朋友可以一起探讨
-<p align="center">
-  <img src="assets/images/qmt-打板微信群.jpg" />
-</p>
-## 由于二维码有时效可以加我微信拉你进群，注意备注来意：strategyshub
+有想使用工具的可以加我微信，注意备注来意：bz_lhbxs
